@@ -162,7 +162,26 @@ def get_data_from_md(section, file_slug, file_path, section_file_slugs):
     markdown_data["hidden"] = hidden
 
 
-def main():
+def main(argv):
+    print ('argument list', sys.argv)
+    site = ''
+    try:
+        opts, args = getopt.getopt(argv,"hs:",["site="])
+    except getopt.GetoptError:
+        print ('readme_doc_list.py -s <site=(billpro|cardcorp)>')
+        sys.exit(2)
+    for opt, arg in opts:
+        print (opt, arg)
+        if opt == '-h':
+            print ('readme_doc_list.py -s <site>=(billpro|cardcorp)')
+            sys.exit()
+        elif opt in ("-s", "--site"):
+            site = arg
+            site.strip()
+            print ('Site=',site)
+            if not ("cardcorp" in site or "billpro" in site):
+                print ('site must be cardcorp or billpro')
+                sys.exit(2)
     page_list_header = ["Section", "Category title", "Page title", "Comments", 
                         "Status", "Draft link", "Display link", "Page title", 
                         "Category slug", "Page slug"]
@@ -187,4 +206,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
