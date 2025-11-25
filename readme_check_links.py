@@ -1,9 +1,9 @@
 '''Readme check links to check links in readme pages'''
 # Download from github the markdown files "code" of the required version
 # Put the markdown folder in the project folder
-# Adjust the dirctory name in the get_section_file_slugs function below
+# Enter the dirctory name with -m mdfiles option
 # Conda activate zing
-# Run python readme_check_links_v2.py
+# Run python readme_check_links_v2.py -m mysite_vx.x.x
 #
 # Check links in readme pages
 import requests
@@ -71,14 +71,14 @@ def check_slug_is_title(slug, title):
         return False
 
 
-def get_section_file_slugs(sections):
+def get_section_file_slugs(sections,mdfiles):
     # for f in glob.glob('/path/**/*.md', recursive=True):
     #     print(f)
     ''' Get the names and paths and slugs of the markdown files in each section'''
     section_file_slugs = {}
     for section in sections:
         section_file_slugs[section] = []
-        link_dir_files = f"./billpro-readme-0.4.0/{section}/**/*.md"
+        link_dir_files = f"./{mdfiles}/{section}/**/*.md"
         files = glob.glob(link_dir_files, recursive=True)
         dir_dic = {}
         for file_path in files:
@@ -164,24 +164,25 @@ def get_data_from_md(section, file_slug, file_path, section_file_slugs):
 
 def main(argv):
     print ('argument list', sys.argv)
-    site = ''
+    mdfiles = ''
     try:
-        opts, args = getopt.getopt(argv,"hs:",["site="])
+        opts, args = getopt.getopt(argv,"hm:",["mdfiles="])
     except getopt.GetoptError:
-        print ('readme_doc_list.py -s <site=(billpro|cardcorp)>')
+        print ('readme_doc_list.py -m <mdfiles=(site)-x.x.x>')
         sys.exit(2)
     for opt, arg in opts:
         print (opt, arg)
         if opt == '-h':
-            print ('readme_doc_list.py -s <site>=(billpro|cardcorp)')
+            print ('readme_check_links.py -m <mdfiles>=(site)-(x.x.x)')
             sys.exit()
-        elif opt in ("-s", "--site"):
-            site = arg
-            site.strip()
-            print ('Site=',site)
-            if not ("cardcorp" in site or "billpro" in site):
-                print ('site must be cardcorp or billpro')
+        elif opt in ("-m", "--mdfiles"):
+            mdfiles = arg
+            mdfiles.strip()
+            print ('MarkdownFiles', mdfiles)
+            if not re.match(r"[\w,-]+?-[0-9,\.]", mdfiles):
+                print ('readme_check_links.py --m <mdfiles>=(site)-(version))')
                 sys.exit(2)
+
     page_list_header = ["Section", "Category title", "Page title", "Comments", 
                         "Status", "Draft link", "Display link", "Page title", 
                         "Category slug", "Page slug"]
@@ -190,7 +191,7 @@ def main(argv):
     sections = ["docs", "reference"]
     # api_sections = ["guides", "reference"]
 
-    section_file_slugs = get_section_file_slugs(sections)
+    section_file_slugs = get_section_file_slugs(sections,mdfiles)
 
     for section in section_file_slugs:
         # print(section_file_slugs[section])
