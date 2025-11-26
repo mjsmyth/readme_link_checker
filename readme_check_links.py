@@ -1,8 +1,7 @@
 '''Readme check links to check links in readme pages'''
 # Download from github the markdown files "code" of the required version
-# Put the markdown folder in the project folder
+# Put the markdown folder in the markdown folder in the project 
 # Enter the dirctory name with -m mdfiles option
-# Conda activate zing
 # Run python readme_check_links_v2.py -m mysite_vx.x.x
 #
 # Check links in readme pages
@@ -78,7 +77,7 @@ def get_section_file_slugs(sections,mdfiles):
     section_file_slugs = {}
     for section in sections:
         section_file_slugs[section] = []
-        link_dir_files = f"./{mdfiles}/{section}/**/*.md"
+        link_dir_files = f"./markdown/{mdfiles}/{section}/**/*.md"
         files = glob.glob(link_dir_files, recursive=True)
         dir_dic = {}
         for file_path in files:
@@ -92,7 +91,7 @@ def get_section_file_slugs(sections,mdfiles):
     return section_file_slugs
 
 
-def get_data_from_md(section, file_slug, file_path, section_file_slugs):
+def get_data_from_md(section, file_slug, file_path, section_file_slugs, page_slug_titles, page_next_links):
     # get data from the markdown
     title_format = r"title:\s([\S\s]*?)\n"
 #    title_format = r"title:\s([A-Z,a-z,1-9,:,\s\?]*?)\n"
@@ -100,8 +99,6 @@ def get_data_from_md(section, file_slug, file_path, section_file_slugs):
     # next_link_format = r"slug:\s([a-z,1-9,:,-]*?)\n"
     next_format = r"(?<=next:\n)[\S\s]*?(?=---)"
     link_format = r"\[[A-Z,a-z,\-,\s]*?]\([a-z,1-9,\:,\-]*?\)"
-
-    markdown_data = {}
 
     next_yaml = ""
     mdtext = ""
@@ -116,6 +113,9 @@ def get_data_from_md(section, file_slug, file_path, section_file_slugs):
     if found_title:
         page_title = found_title.group(1)
     slug_match = check_slug_is_title(file_slug, page_title) 
+    # this checks slug is title
+    if not slug_match:
+        page_slug_titles.append([section, page_title, file_slug])
     
     found_links = re.findall(link_format, mdtext)
     for link in found_links:
@@ -123,7 +123,7 @@ def get_data_from_md(section, file_slug, file_path, section_file_slugs):
         valid_link = check_valid_link_slug(link_section, link_slug, section_file_slugs, section)
         if not valid_link:
             print(f"{file_slug}: {link_text_in_page} invalid link to {link_section} : {link_slug}")
-
+            page_next_links.append([section, file_slug, "inline", link_text_in_page, link_section, link_slug])
     found_next = re.search(next_format, mdtext)
 
     if found_next:
@@ -146,7 +146,8 @@ def get_data_from_md(section, file_slug, file_path, section_file_slugs):
                             print(f"Unknown section type: {type}")
                         valid_next_link = check_valid_link_slug(next_section, next_slug, section_file_slugs, section)
                         if not valid_next_link:
-                            print(f"{file_slug}: invalid link to {next_section} : {next_slug}")
+                            print(f"{file_slug}: {next_title} invalid link to {next_section} : {next_slug}")
+                            page_next_links.append([section, file_slug, "next", next_title, next_section, next_slug])
     found_hidden = re.search(hidden_format, mdtext)
     if found_hidden:
         hidden_text = found_hidden.group(1)
@@ -155,14 +156,16 @@ def get_data_from_md(section, file_slug, file_path, section_file_slugs):
         else:
             hidden = False
 
-    markdown_data["file_slug"] = file_slug
-    markdown_data["section"] = section
-    markdown_data["title"] = page_title
-    markdown_data["slug_match"] = slug_match
-    markdown_data["hidden"] = hidden
+    # markdown_data["file_slug"] = file_slug
+    # markdown_data["section"] = section
+    # markdown_data["title"] = page_title
+    # markdown_data["slug_match"] = slug_match
+    # markdown_data["hidden"] = hidden
 
 
 def main(argv):
+    page_slug_titles = []
+    page_next_links = []
     print ('argument list', sys.argv)
     mdfiles = ''
     try:
@@ -183,10 +186,9 @@ def main(argv):
                 print ('readme_check_links.py --m <mdfiles>=(site)-(version))')
                 sys.exit(2)
 
-    page_list_header = ["Section", "Category title", "Page title", "Comments", 
-                        "Status", "Draft link", "Display link", "Page title", 
-                        "Category slug", "Page slug"]
-    # result_list_header = ["Category title", "Page title", "Draft link", "Page slug", "Bad links"]
+    page_slug_titles_header = ["Section", "Page title", "Page slug"]
+
+    page_next_links_header = ["Section", "Page slug", "Type", "Link text", "Section", "Link slug" ]
 
     sections = ["docs", "reference"]
     # api_sections = ["guides", "reference"]
@@ -200,10 +202,21 @@ def main(argv):
             file_path = file_info[1]
 
             print("--------------------------------------")
-            get_data_from_md(section, file_slug, file_path, section_file_slugs)
+            get_data_from_md(section, file_slug, file_path, section_file_slugs, page_slug_titles, page_next_links)
 
-     # if __name__ == "__main__":
-     #    main(sys.argv[1:])
+    current_date = datetime.date.today()
+
+    with open(f'./csv_reports/{mdfiles}_{current_date}_page_slug_titles.csv', 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(page_slug_titles_header)
+        for page in page_slug_titles:
+            writer.writerow(page)
+
+    with open(f'./csv_reports/{mdfiles}_{current_date}_page_next_links.csv', 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(page_next_links_header)
+        for page in page_next_links:
+            writer.writerow(page)
 
 
 if __name__ == "__main__":
